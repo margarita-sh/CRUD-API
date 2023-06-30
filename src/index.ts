@@ -51,30 +51,30 @@ const server = http.createServer((req: http.IncomingMessage, res: http.ServerRes
 
 		case METHODS.POST:
 			if (url?.includes('api/users')) {
-				try {
-					let body = '';
-
-					req.on('data', (chunk) => {
-						body += chunk.toString();
-					});
-
-					req.on('end', async () => {
-						const createdUser = JSON.parse(body);
-						if (hasAllRequiredFields(createdUser)) {
-							let user = new User(createdUser);
-							users.push(user);
-							res.writeHead(201, { "Content-Type": "application/json" });
-							res.end(JSON.stringify(user));
+				let body = '';
+				req.on('data', (chunk) => {
+					body += chunk.toString();
+				});
+				req.on('end', () => {
+					try {
+						const newUser: UserInterface = JSON.parse(body);
+						if (hasAllRequiredFields(newUser)) {
+							newUser.id = userId;
+							users.push(newUser);
+							res.statusCode = 201;
+							res.setHeader('Content-Type', 'application/json');
+							res.end(JSON.stringify({ message: newUser }));
 						} else {
-							res.writeHead(400, { "Content-Type": "application/json" });
-							res.end(JSON.stringify({ message: 'User does not contain required fields' }));
+							res.statusCode = 400;
+							res.setHeader('Content-Type', 'application/json');
+							res.end(JSON.stringify({ message: 'Invalid user data' }));
 						}
-					});
-				} catch (error) {
-					res.writeHead(500, { "Content-Type": "application/json" });
-					res.end(JSON.stringify({ message: 'Internal Server Error' }));
-				}
-
+					} catch (error) {
+						res.statusCode = 500;
+						res.setHeader('Content-Type', 'application/json');
+						res.end(JSON.stringify({ message: 'Internal Server Error' }));
+					}
+				});
 			}
 			break;
 
