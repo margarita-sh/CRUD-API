@@ -3,50 +3,87 @@ import * as dotenv from 'dotenv';
 import { METHODS } from './methods.enum';
 import { UserInterface } from './user.interface';
 import { isValidUUID } from './utils/check-uuid';
+import { hasAllRequiredFields } from './utils/check-requiredFields';
+import { User } from './utils/user';
 
 dotenv.config();
-const users: UserInterface[] = [];
-const server = http.createServer((req: http.IncomingMessage, res: http.ServerResponse) => {
 
+const users: UserInterface[] = [];
+
+const server = http.createServer((req: http.IncomingMessage, res: http.ServerResponse) => {
 	const { url, method } = req;
-	const urlParsing: string[] = url?.split('/');
-	const userId = urlParsing[urlParsing.length - 1]
+	const urlParsing: string[] = url?.split('/') || [];
+	const userId = urlParsing[urlParsing.length - 1];
+
 	switch (method) {
 		case METHODS.GET:
-			if (url === 'api/users') {
-				res.statusCode = 200;
-				res.setHeader('Content-Type', 'application/json');
-				res.end(JSON.stringify({ message: [] }));
-			}
-
-			if (url?.includes('api/users') && urlParsing.length === 3) {
-				if (isValidUUID(userId)) {
-					const foundUser = users.find(user => user.id === userId);
-					if (foundUser) {
-						res.statusCode = 200;
-						res.setHeader('Content-Type', 'application/json');
-						res.end(JSON.stringify({ message: foundUser }));
-					} else {
-						res.statusCode = 404;
-						res.setHeader('Content-Type', 'application/json');
-						res.end(JSON.stringify({ message: 'user ID  is not found' }));
-					}
-				} else {
-					res.statusCode = 400;
+			try {
+				if (url?.includes('api/users') && urlParsing.length === 2) {
+					res.statusCode = 200;
 					res.setHeader('Content-Type', 'application/json');
-					res.end(JSON.stringify({ message: 'user ID  is not invalid' }));
+					res.end(JSON.stringify({ message: users }));
 				}
-				break;
-				case METHODS.POST:
-					if (url === 'api/users') {
-						res.statusCode = 200;
-						res.setHeader('Content-Type', 'application/json');
-						res.end(JSON.stringify({ message: [] }));
-					}
-					break;
 
+				if (url?.includes('api/users') && urlParsing.length === 3) {
+					if (isValidUUID(userId)) {
+						const foundUser = users.find((user) => user.id === userId);
+						if (foundUser) {
+							res.statusCode = 200;
+							res.setHeader('Content-Type', 'application/json');
+							res.end(JSON.stringify({ message: foundUser }));
+						} else {
+							res.statusCode = 404;
+							res.setHeader('Content-Type', 'application/json');
+							res.end(JSON.stringify({ message: 'User ID is not found' }));
+						}
+					} else {
+						res.statusCode = 400;
+						res.setHeader('Content-Type', 'application/json');
+						res.end(JSON.stringify({ message: 'Invalid user ID' }));
+					}
+				}
+			} catch (err) {
+				res.writeHead(500, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ message: 'Internal Server Error' }));
 			}
 
-	});
+			break;
+
+		case METHODS.POST:
+			if (url?.includes('api/users')) {
+				try {
+					let body = '';
+
+					req.on('data', (chunk) => {
+						body += chunk.toString();
+					});
+
+					req.on('end', async () => {
+						const createdUser = JSON.parse(body);
+						if (hasAllRequiredFields(createdUser)) {
+							let user = new User(createdUser);
+							users.push(user);
+							res.writeHead(201, { "Content-Type": "application/json" });
+							res.end(JSON.stringify(user));
+						} else {
+							res.writeHead(400, { "Content-Type": "application/json" });
+							res.end(JSON.stringify({ message: 'User does not contain required fields' }));
+						}
+					});
+				} catch (error) {
+					res.writeHead(500, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ message: 'Internal Server Error' }));
+				}
+
+			}
+			break;
+
+		default:
+			res.statusCode = 404;
+			res.setHeader('Content-Type', 'application/json');
+			res.end(JSON.stringify({ message: 'Invalid route' }));
+			break;
+	}
+});
 
 server.listen(process.env.PORT);
