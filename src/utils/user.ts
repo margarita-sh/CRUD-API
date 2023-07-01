@@ -11,7 +11,7 @@ export class User {
 		this.username = data.username || '';
 		this.age = data.age || 0;
 		this.hobbies = data.hobbies || [];
-		this.id = uuid.v1();
+		this.id  = data.id ?? uuid.v1();
 	}
 
 }

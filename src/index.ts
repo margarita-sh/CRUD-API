@@ -27,7 +27,7 @@ const server = http.createServer((req: http.IncomingMessage, res: http.ServerRes
 					res.end(JSON.stringify({ message: users }));
 				}
 
-				if (url?.includes('api/users') && userId) {
+				if (url?.includes('api/users') && urlParsing.length === 3) {
 					if (isValidUUID(userId)) {
 						const foundUser = users.find((user) => user.id === userId);
 						if (foundUser) {
@@ -37,13 +37,18 @@ const server = http.createServer((req: http.IncomingMessage, res: http.ServerRes
 						} else {
 							res.statusCode = STATUS_CODE.NOT_FOUND;
 							res.setHeader('Content-Type', 'application/json');
-							res.end(JSON.stringify({ message: 'User ID is not found' }));
+							res.end(JSON.stringify({ message: 'User is not found' }));
 						}
 					} else {
 						res.statusCode = STATUS_CODE.BAD_REQUEST;
 						res.setHeader('Content-Type', 'application/json');
 						res.end(JSON.stringify({ message: 'Invalid user ID' }));
 					}
+				}
+				if (!url?.includes('api/users')) {
+					res.statusCode = STATUS_CODE.NOT_FOUND;
+					res.setHeader('Content-Type', 'application/json');
+					res.end(JSON.stringify({ message: 'Invalid route' }));
 				}
 			} catch (err) {
 				res.writeHead(500, { "Content-Type": "application/json" });
@@ -59,7 +64,6 @@ const server = http.createServer((req: http.IncomingMessage, res: http.ServerRes
 					body += chunk;
 				});
 				req.on('end', () => {
-					console.log('body', body);
 					if (!checkJSONvalifity(body)) {
 						res.statusCode = STATUS_CODE.BAD_REQUEST;
 						res.writeHead(res.statusCode, { 'Content-Type': 'application/json' });
@@ -92,58 +96,83 @@ const server = http.createServer((req: http.IncomingMessage, res: http.ServerRes
 			}
 			break;
 
-
-
-			case METHODS.PUT:
-				if (url?.includes('api/users')) {
-					let body = '';
-					req.on('data', chunk => {
-						body += chunk;
-					});
-					req.on('end', () => {
-						console.log('body', body);
-						if (!checkJSONvalifity(body)) {
-							res.statusCode = STATUS_CODE.BAD_REQUEST;
-							res.writeHead(res.statusCode, { 'Content-Type': 'application/json' });
-							res.end(JSON.stringify({ message: 'Invalid JSON' }));
-						} else {
-							try {
-								const newUser: UserInterface = JSON.parse(body);
-								console.log('hasAllRequiredFields(newUser)', hasAllRequiredFields(newUser));
-								console.log('isValidUUID(newUser?.id)', isValidUUID(newUser?.id));
-								if (hasAllRequiredFields(newUser) && isValidUUID(newUser?.id)) {
-									console.log('users',users);
-									const findIndex = users.findIndex(user => user.id === newUser?.id);
-									console.log('findIndex', findIndex);
-									if(findIndex>=0){
-										users.splice(findIndex, 1, newUser);
-										res.statusCode = STATUS_CODE.SUCCESS;
-										res.setHeader('Content-Type', 'application/json');
-										res.end(JSON.stringify({ message: newUser }));
-									}else{
-										res.statusCode = STATUS_CODE.BAD_REQUEST;
-										res.setHeader('Content-Type', 'application/json');
-										res.end(JSON.stringify({ message: 'User is not found' }));
-									}
-								
+		case METHODS.PUT:
+			if (url?.includes('api/users')) {
+				let body = '';
+				req.on('data', chunk => {
+					body += chunk;
+				});
+				req.on('end', () => {
+					if (!checkJSONvalifity(body)) {
+						res.statusCode = STATUS_CODE.BAD_REQUEST;
+						res.writeHead(res.statusCode, { 'Content-Type': 'application/json' });
+						res.end(JSON.stringify({ message: 'Invalid JSON' }));
+					} else {
+						try {
+							const requestedUser: UserInterface = JSON.parse(body);
+							if (hasAllRequiredFields(requestedUser) && isValidUUID(userId)) {
+								const findIndex = users.findIndex(user => user.id === userId);
+								if (findIndex >= 0) {
+									requestedUser.id = userId;
+									console.log('requestedUser', requestedUser)
+									users.splice(findIndex, 1, requestedUser);
+									res.statusCode = STATUS_CODE.SUCCESS;
+									res.setHeader('Content-Type', 'application/json');
+									res.end(JSON.stringify({ message: users[findIndex] }));
 								} else {
 									res.statusCode = STATUS_CODE.BAD_REQUEST;
 									res.setHeader('Content-Type', 'application/json');
-									res.end(JSON.stringify({ message: 'Invalid user data, specify all required fields' }));
+									res.end(JSON.stringify({ message: 'User is not found' }));
 								}
-							} catch (error) {
-								res.statusCode = STATUS_CODE.SERVER_ERROR;
+
+							} else {
+								res.statusCode = STATUS_CODE.BAD_REQUEST;
 								res.setHeader('Content-Type', 'application/json');
-								res.end(JSON.stringify({ message: 'Internal Server Error' }));
+								res.end(JSON.stringify({ message: 'Invalid user data, specify all required fields' }));
 							}
-						};
-					})
-				} else {
-					res.statusCode = STATUS_CODE.NOT_FOUND;
+						} catch (error) {
+							res.statusCode = STATUS_CODE.SERVER_ERROR;
+							res.setHeader('Content-Type', 'application/json');
+							res.end(JSON.stringify({ message: 'Internal Server Error' }));
+						}
+					};
+				})
+			} else {
+				res.statusCode = STATUS_CODE.NOT_FOUND;
+				res.setHeader('Content-Type', 'application/json');
+				res.end(JSON.stringify({ message: 'Invalid route' }));
+			}
+			break;
+
+		case METHODS.DELETE:
+			if (url?.includes('api/users')) {
+				try {
+					if (isValidUUID(userId)) {
+						const findIndex = users.findIndex(user => user.id === userId);
+						if (findIndex >= 0) {
+							users.splice(findIndex, 1);
+							res.statusCode = 204;
+							res.setHeader('Content-Type', 'application/json');
+							res.end(JSON.stringify({ message: 'The user was removed' }));
+						} else {
+							res.statusCode = STATUS_CODE.NOT_FOUND;
+							res.setHeader('Content-Type', 'application/json');
+							res.end(JSON.stringify({ message: 'User is not found' }));
+						}
+
+					} else {
+						res.statusCode = STATUS_CODE.BAD_REQUEST;
+						res.setHeader('Content-Type', 'application/json');
+						res.end(JSON.stringify({ message: 'Invalid user data' }));
+					}
+				} catch (error) {
+					res.statusCode = STATUS_CODE.SERVER_ERROR;
 					res.setHeader('Content-Type', 'application/json');
-					res.end(JSON.stringify({ message: 'Invalid route' }));
+					res.end(JSON.stringify({ message: 'Internal Server Error' }));
 				}
-				break;
+			};
+			break;
+
 
 		default:
 			res.statusCode = STATUS_CODE.NOT_FOUND;
