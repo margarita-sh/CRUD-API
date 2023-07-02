@@ -1,5 +1,5 @@
 import * as uuid from 'uuid';
-import { UserInterface } from '../user.interface';
+import { IUser } from '../user.interface';
 
 export class User {
 	public username: string;
@@ -7,7 +7,7 @@ export class User {
 	public hobbies: string[];
 	public id: string;
 
-	constructor(data: Partial<UserInterface>) {
+	constructor(data: Partial<IUser>) {
 		this.username = data.username || '';
 		this.age = data.age || 0;
 		this.hobbies = data.hobbies || [];

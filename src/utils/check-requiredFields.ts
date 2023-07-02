@@ -1,7 +1,7 @@
-import { UserInterface } from '../user.interface';
+import { IUser } from '../user.interface';
 
-export function hasAllRequiredFields(user: Partial<UserInterface>): boolean {
-	const requiredFields: Array<keyof UserInterface> = ['username', 'age', 'hobbies'];
+export function hasAllRequiredFields(user: Partial<IUser>): boolean {
+	const requiredFields: Array<keyof IUser> = ['username', 'age', 'hobbies'];
 	for (const field of requiredFields) {
 	  if (!(field in user)) {
 		return false;
