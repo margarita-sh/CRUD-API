@@ -4,8 +4,8 @@
   "description": "api server",
   "main": "index.js",
   "scripts": {
-    "start:dev": "cross-env NODE_ENV=development ts-node-dev --respawn src/index.ts",
-    "start:prod": "cross-env NODE_ENV=production ts-node-dev --respawn src/index.ts",
+    "start:dev": "ts-node-dev --respawn src/index.ts",
+    "start:prod": "tsc && node dist/src/index.js",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write src/**/*.ts",
     "build": "tsc",
